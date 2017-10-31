@@ -283,10 +283,10 @@ class Converter(object):
         type_ = a.metadata.get(TYPE_METADATA_KEY)
         if type_ is None:
             # No type.
-            return mapping[name]
+            return mapping.get(name, a.default)
         if _is_union_type(type_):
             # This is a union.
-            val = mapping.get(name, NOTHING)
+            val = mapping.get(name, a.default)
             if NoneType in type_.__args__ and val is NOTHING:
                 return None
             return self._structure_union(val, type_)
