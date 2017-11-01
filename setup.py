@@ -24,7 +24,7 @@ if sys.version_info < (3, 0):
 
 setup(
     name='cattrs',
-    version='0.5.0.dev1+zillow',
+    version='0.5.0.dev2+zillow',
     description="Composable complex class support for attrs.",
     long_description=readme + '\n\n' + history,
     author="Tin Tvrtković",
