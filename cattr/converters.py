@@ -29,6 +29,9 @@ def _is_union_type(obj):
     """ returns true if the object is an instance of union. """
     return isinstance(obj, _Union)
 
+def _is_optional(obj):
+    return _is_union_type(obj) and NoneType in obj.__args__
+
 
 def _subclass(typ):
     """ a shortcut """
@@ -273,23 +276,22 @@ class Converter(object):
         for a in cl.__attrs_attrs__:
             name = a.name
             # We detect the type by metadata.
-            converted = self._structure_attr_from_dict(a, name, obj)
-            conv_obj[name] = converted
+            if name in obj:
+                converted = self._structure_attr_from_dict(a, name, obj)
+                conv_obj[name] = converted
+            elif _is_optional(a.metadata.get(TYPE_METADATA_KEY)):
+                conv_obj[name] = None
 
         return cl(**conv_obj)
+
 
     def _structure_attr_from_dict(self, a, name, mapping):
         """Handle an individual attrs attribute structuring."""
         type_ = a.metadata.get(TYPE_METADATA_KEY)
-        val = mapping.get(name, a.default)
+        val = mapping[name]
         if type_ is None:
             # No type.
             return val
-        if _is_union_type(type_):
-
-            if NoneType in type_.__args__ and val is NOTHING:
-                return None
-            return self._structure_union(val, type_)
         return self._structure.dispatch(type_)(val, type_)
 
     def _structure_list(self, obj, cl):
@@ -341,6 +343,11 @@ class Converter(object):
                 return {key_conv(k, key_type): val_conv(v, val_type)
                         for k, v in obj.items()}
 
+    def _structure_optional(self, obj, optional):
+        if obj is None:
+            return None
+        self.structure
+
     def _structure_union(self, obj, union):
         # type: (_Union, Any): -> Any
         """Deal with converting a union."""
@@ -369,8 +376,15 @@ class Converter(object):
         # Getting here means either this is not an optional, or it's an
         # optional with more than one parameter.
         # Let's support only unions of attr classes for now.
-        cl = self._dis_func_cache(union)(obj)
-        return self._structure.dispatch(cl)(obj, cl)
+        for cl in union_params:
+            try:
+                res = self._structure.dispatch(cl)(obj, cl)
+                return res
+            except:
+                pass
+        raise ValueError("object {0} was not one of {1}".format(
+            str(obj), union_params
+        ))
 
     def _structure_tuple(self, obj, tup):
         # type: (Type[Tuple], Iterable) -> Any

@@ -78,9 +78,7 @@ def test_union_field_roundtrip(converter, cl_and_vals_a, cl_and_vals_b, strat):
     if strat is UnstructureStrategy.AS_DICT:
         assert inst == converter.structure(converter.unstructure(inst), C)
     else:
-        # Our disambiguation functions only support dictionaries for now.
-        with pytest.raises(ValueError):
-            converter.structure(converter.unstructure(inst), C)
+        assert inst == converter.structure(converter.unstructure(inst), C)
 
         def handler(obj, _):
             return converter.structure(obj, cl_a)

@@ -1,6 +1,9 @@
 """Loading of attrs classes."""
+import attr
 from attr import asdict, astuple, fields, make_class
+from cattr import typed
 from hypothesis import assume, given
+from pytest import raises
 
 from typing import Union
 
@@ -41,6 +44,19 @@ def test_roundtrip(converter, cl_and_vals):
     loaded = converter.structure(dumped, cl)
 
     assert obj == loaded
+
+
+def test_structure_with_empty_class(converter):
+    """
+    with an empty attrs class with required arguments,
+    structure should raise
+    """
+    @attr.s
+    class A(object):
+        a = typed(int)
+
+    with raises(TypeError):
+        converter.structure({}, A)
 
 
 @given(simple_classes())

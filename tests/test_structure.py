@@ -300,8 +300,6 @@ def test_structuring_unsupported(converter):
     """Loading unsupported classes should throw."""
     with raises(ValueError):
         converter.structure(1, Converter)
-    with raises(ValueError):
-        converter.structure(1, Union[int, unicode])
 
 
 def test_subclass_registration_is_honored(converter):
