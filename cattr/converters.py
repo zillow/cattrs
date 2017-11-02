@@ -1,13 +1,13 @@
+from attr import NOTHING
 from enum import Enum
 from typing import (List, Mapping, Sequence, Optional, MutableSequence,
                     TypeVar, Any, FrozenSet, MutableSet, Set, MutableMapping,
                     Dict, Tuple, _Union)
+
 from ._compat import lru_cache, unicode, bytes, is_py2
 from .disambiguators import create_uniq_field_dis_func
 from .metadata import TYPE_METADATA_KEY
 from .multistrategy_dispatch import MultiStrategyDispatch
-
-from attr import NOTHING
 
 
 NoneType = type(None)
@@ -29,6 +29,7 @@ def _is_union_type(obj):
     """ returns true if the object is an instance of union. """
     return isinstance(obj, _Union)
 
+
 def _is_optional(obj):
     return _is_union_type(obj) and NoneType in obj.__args__
 
@@ -36,6 +37,17 @@ def _is_optional(obj):
 def _subclass(typ):
     """ a shortcut """
     return (lambda cls: issubclass(cls, typ))
+
+
+def _get_preferred_class(classes, obj):
+    for cl in classes:
+        typ = cl
+        # getting raw class from typing
+        if hasattr(cl, "__extra__"):
+            typ = cl.__extra__
+        if typ == type(obj):
+            return cl
+    return None
 
 
 class Converter(object):
@@ -180,6 +192,7 @@ class Converter(object):
     def unstructure_attrs_asdict(self, obj):
         """Our version of `attrs.asdict`, so we can call back to us."""
         attrs = obj.__class__.__attrs_attrs__
+
         rv = self._dict_factory()
         for a in attrs:
             name = a.name
@@ -280,15 +293,19 @@ class Converter(object):
                 converted = self._structure_attr_from_dict(a, name, obj)
                 conv_obj[name] = converted
             elif _is_optional(a.metadata.get(TYPE_METADATA_KEY)):
-                conv_obj[name] = None
+                val = None
+                if a.default != NOTHING:
+                    val = a.default
+                conv_obj[name] = val
 
         return cl(**conv_obj)
-
 
     def _structure_attr_from_dict(self, a, name, mapping):
         """Handle an individual attrs attribute structuring."""
         type_ = a.metadata.get(TYPE_METADATA_KEY)
         val = mapping[name]
+        if val is None and a.default != NOTHING:
+            val = a.default
         if type_ is None:
             # No type.
             return val
@@ -343,11 +360,6 @@ class Converter(object):
                 return {key_conv(k, key_type): val_conv(v, val_type)
                         for k, v in obj.items()}
 
-    def _structure_optional(self, obj, optional):
-        if obj is None:
-            return None
-        self.structure
-
     def _structure_union(self, obj, union):
         # type: (_Union, Any): -> Any
         """Deal with converting a union."""
@@ -376,12 +388,17 @@ class Converter(object):
         # Getting here means either this is not an optional, or it's an
         # optional with more than one parameter.
         # Let's support only unions of attr classes for now.
-        for cl in union_params:
-            try:
-                res = self._structure.dispatch(cl)(obj, cl)
-                return res
-            except:
-                pass
+        pc = _get_preferred_class(union_params, obj)
+
+        if pc:
+            return self._structure.dispatch(pc)(obj, pc)
+        else:
+            for cl in union_params:
+                try:
+                    res = self._structure.dispatch(cl)(obj, cl)
+                    return res
+                except:
+                    pass
         raise ValueError("object {0} was not one of {1}".format(
             str(obj), union_params
         ))

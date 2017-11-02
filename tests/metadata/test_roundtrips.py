@@ -1,6 +1,5 @@
 """Test both structuring and unstructuring."""
 import attr
-import pytest
 
 from attr import fields, make_class
 from hypothesis import assume, given
