@@ -1,4 +1,5 @@
 from attr import NOTHING
+from copy import copy
 from enum import Enum
 from typing import (List, Mapping, Sequence, Optional, MutableSequence,
                     TypeVar, Any, FrozenSet, MutableSet, Set, MutableMapping,
@@ -285,7 +286,7 @@ class Converter(object):
         # type: (Mapping, Type) -> Any
         """Instantiate an attrs class from a mapping (dict)."""
         # For public use.
-        conv_obj = obj.copy()  # Dict of converted parameters.
+        conv_obj = copy(obj)  # Dict of converted parameters.
         for a in cl.__attrs_attrs__:
             name = a.name
             # We detect the type by metadata.
